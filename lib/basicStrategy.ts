@@ -1,6 +1,38 @@
 import { Card, PlayerAction, DifficultyLevel } from './types';
 import { calculateHandValue, isPair } from './handValue';
 import { getCardValue } from './deck';
+import {
+  ALWAYS_STAND_THRESHOLD,
+  DOUBLE_ON_11_THRESHOLD,
+  DOUBLE_ON_10_MAX_DEALER,
+  DOUBLE_ON_9_MIN_DEALER,
+  DOUBLE_ON_9_MAX_DEALER,
+  HARD_12_STAND_MIN_DEALER,
+  HARD_12_STAND_MAX_DEALER,
+  HARD_13_15_HIT_THRESHOLD,
+  HARD_16_HIT_THRESHOLD,
+  SOFT_19_DOUBLE_DEALER,
+  SOFT_18_HIT_THRESHOLD,
+  SOFT_18_DOUBLE_MIN_DEALER,
+  SOFT_18_DOUBLE_MAX_DEALER,
+  SOFT_17_DOUBLE_MIN_DEALER,
+  SOFT_17_DOUBLE_MAX_DEALER,
+  SOFT_15_16_DOUBLE_MIN_DEALER,
+  SOFT_15_16_DOUBLE_MAX_DEALER,
+  SOFT_13_14_DOUBLE_DEALER_5,
+  SOFT_13_14_DOUBLE_DEALER_6,
+  PAIR_9_NO_SPLIT_DEALER_7,
+  PAIR_9_NO_SPLIT_THRESHOLD,
+  PAIR_7_SPLIT_MIN_DEALER,
+  PAIR_7_SPLIT_MAX_DEALER,
+  PAIR_6_SPLIT_MIN_DEALER,
+  PAIR_6_SPLIT_MAX_DEALER,
+  PAIR_2_3_SPLIT_MIN_DEALER,
+  PAIR_2_3_SPLIT_MAX_DEALER,
+  SURRENDER_16_MIN_DEALER,
+  SURRENDER_15_DEALER_10,
+  BLACKJACK_VALUE,
+} from './constants';
 
 /**
  * Gets the optimal action according to basic strategy
@@ -47,39 +79,39 @@ function getHardHandAction(
   canDouble: boolean
 ): PlayerAction {
   // 17 or higher: always stand
-  if (playerTotal >= 17) return 'stand';
+  if (playerTotal >= ALWAYS_STAND_THRESHOLD) return 'stand';
 
   // 16 or less
   if (playerTotal === 16) {
-    return dealerValue >= 7 ? 'hit' : 'stand';
+    return dealerValue >= HARD_16_HIT_THRESHOLD ? 'hit' : 'stand';
   }
 
   if (playerTotal === 15) {
-    return dealerValue >= 7 ? 'hit' : 'stand';
+    return dealerValue >= HARD_13_15_HIT_THRESHOLD ? 'hit' : 'stand';
   }
 
   if (playerTotal === 14) {
-    return dealerValue >= 7 ? 'hit' : 'stand';
+    return dealerValue >= HARD_13_15_HIT_THRESHOLD ? 'hit' : 'stand';
   }
 
   if (playerTotal === 13) {
-    return dealerValue >= 7 ? 'hit' : 'stand';
+    return dealerValue >= HARD_13_15_HIT_THRESHOLD ? 'hit' : 'stand';
   }
 
   if (playerTotal === 12) {
-    return (dealerValue >= 4 && dealerValue <= 6) ? 'stand' : 'hit';
+    return (dealerValue >= HARD_12_STAND_MIN_DEALER && dealerValue <= HARD_12_STAND_MAX_DEALER) ? 'stand' : 'hit';
   }
 
-  if (playerTotal === 11) {
+  if (playerTotal === DOUBLE_ON_11_THRESHOLD) {
     return canDouble ? 'double' : 'hit';
   }
 
   if (playerTotal === 10) {
-    return (canDouble && dealerValue <= 9) ? 'double' : 'hit';
+    return (canDouble && dealerValue <= DOUBLE_ON_10_MAX_DEALER) ? 'double' : 'hit';
   }
 
   if (playerTotal === 9) {
-    return (canDouble && dealerValue >= 3 && dealerValue <= 6) ? 'double' : 'hit';
+    return (canDouble && dealerValue >= DOUBLE_ON_9_MIN_DEALER && dealerValue <= DOUBLE_ON_9_MAX_DEALER) ? 'double' : 'hit';
   }
 
   // 8 or less: always hit
@@ -99,39 +131,39 @@ function getSoftHandAction(
 
   // Soft 19 (A-8)
   if (playerTotal === 19) {
-    return (canDouble && dealerValue === 6) ? 'double' : 'stand';
+    return (canDouble && dealerValue === SOFT_19_DOUBLE_DEALER) ? 'double' : 'stand';
   }
 
   // Soft 18 (A-7)
   if (playerTotal === 18) {
-    if (dealerValue >= 9) return 'hit';
-    if (canDouble && (dealerValue >= 3 && dealerValue <= 6)) return 'double';
+    if (dealerValue >= SOFT_18_HIT_THRESHOLD) return 'hit';
+    if (canDouble && (dealerValue >= SOFT_18_DOUBLE_MIN_DEALER && dealerValue <= SOFT_18_DOUBLE_MAX_DEALER)) return 'double';
     return 'stand';
   }
 
   // Soft 17 (A-6)
   if (playerTotal === 17) {
-    return (canDouble && dealerValue >= 3 && dealerValue <= 6) ? 'double' : 'hit';
+    return (canDouble && dealerValue >= SOFT_17_DOUBLE_MIN_DEALER && dealerValue <= SOFT_17_DOUBLE_MAX_DEALER) ? 'double' : 'hit';
   }
 
   // Soft 16 (A-5)
   if (playerTotal === 16) {
-    return (canDouble && dealerValue >= 4 && dealerValue <= 6) ? 'double' : 'hit';
+    return (canDouble && dealerValue >= SOFT_15_16_DOUBLE_MIN_DEALER && dealerValue <= SOFT_15_16_DOUBLE_MAX_DEALER) ? 'double' : 'hit';
   }
 
   // Soft 15 (A-4)
   if (playerTotal === 15) {
-    return (canDouble && dealerValue >= 4 && dealerValue <= 6) ? 'double' : 'hit';
+    return (canDouble && dealerValue >= SOFT_15_16_DOUBLE_MIN_DEALER && dealerValue <= SOFT_15_16_DOUBLE_MAX_DEALER) ? 'double' : 'hit';
   }
 
   // Soft 14 (A-3)
   if (playerTotal === 14) {
-    return (canDouble && (dealerValue === 5 || dealerValue === 6)) ? 'double' : 'hit';
+    return (canDouble && (dealerValue === SOFT_13_14_DOUBLE_DEALER_5 || dealerValue === SOFT_13_14_DOUBLE_DEALER_6)) ? 'double' : 'hit';
   }
 
   // Soft 13 (A-2)
   if (playerTotal === 13) {
-    return (canDouble && (dealerValue === 5 || dealerValue === 6)) ? 'double' : 'hit';
+    return (canDouble && (dealerValue === SOFT_13_14_DOUBLE_DEALER_5 || dealerValue === SOFT_13_14_DOUBLE_DEALER_6)) ? 'double' : 'hit';
   }
 
   return 'hit';
@@ -154,22 +186,22 @@ function getPairAction(
 
   // 9s: split except against 7, 10, or Ace
   if (pairRank === '9') {
-    return (dealerValue === 7 || dealerValue >= 10) ? 'nosplit' : 'split';
+    return (dealerValue === PAIR_9_NO_SPLIT_DEALER_7 || dealerValue >= PAIR_9_NO_SPLIT_THRESHOLD) ? 'nosplit' : 'split';
   }
 
   // 7s: split against 2-7
   if (pairRank === '7') {
-    return (dealerValue >= 2 && dealerValue <= 7) ? 'split' : 'nosplit';
+    return (dealerValue >= PAIR_7_SPLIT_MIN_DEALER && dealerValue <= PAIR_7_SPLIT_MAX_DEALER) ? 'split' : 'nosplit';
   }
 
   // 6s: split against 2-6 (DAS)
   if (pairRank === '6') {
-    return (dealerValue >= 2 && dealerValue <= 6) ? 'split' : 'nosplit';
+    return (dealerValue >= PAIR_6_SPLIT_MIN_DEALER && dealerValue <= PAIR_6_SPLIT_MAX_DEALER) ? 'split' : 'nosplit';
   }
 
   // 3s and 2s: split against 2-7 (DAS)
   if (pairRank === '3' || pairRank === '2') {
-    return (dealerValue >= 2 && dealerValue <= 7) ? 'split' : 'nosplit';
+    return (dealerValue >= PAIR_2_3_SPLIT_MIN_DEALER && dealerValue <= PAIR_2_3_SPLIT_MAX_DEALER) ? 'split' : 'nosplit';
   }
 
   return 'nosplit';
@@ -187,10 +219,10 @@ function checkSurrender(
   if (isSoft) return false;
 
   // Surrender 16 vs dealer 9, 10, or Ace
-  if (playerTotal === 16 && dealerValue >= 9) return true;
+  if (playerTotal === 16 && dealerValue >= SURRENDER_16_MIN_DEALER) return true;
 
   // Surrender 15 vs dealer 10
-  if (playerTotal === 15 && dealerValue === 10) return true;
+  if (playerTotal === 15 && dealerValue === SURRENDER_15_DEALER_10) return true;
 
   return false;
 }

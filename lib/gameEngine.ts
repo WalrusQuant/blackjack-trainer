@@ -1,14 +1,21 @@
-import { Card, Hand, DifficultyLevel, PlayerAction } from './types';
-import { createDeck, shuffleDeck, dealCard } from './deck';
-import { calculateHandValue, isPair } from './handValue';
-
-export interface TrainingScenario {
-  playerCards: Card[];
-  dealerUpcard: Card;
-  canDouble: boolean;
-  canSplit: boolean;
-  canSurrender: boolean;
-}
+import { Card, DifficultyLevel, TrainingScenario, Rank } from './types';
+import { createDeck, shuffleDeck } from './deck';
+import {
+  HARD_TOTAL_MIN,
+  HARD_TOTAL_MAX,
+  SOFT_SECOND_CARD_MIN,
+  SOFT_SECOND_CARD_MAX,
+  LEVEL_3_PAIR_PROBABILITY,
+  LEVEL_3_SOFT_PROBABILITY,
+  LEVEL_4_PAIR_PROBABILITY,
+  LEVEL_4_SOFT_PROBABILITY,
+  LEVEL_4_HARD_PROBABILITY,
+  MIN_CARD_VALUE,
+  MAX_CARD_VALUE,
+  THREE_CARD_HAND_PROBABILITY,
+  MIN_THREE_CARD_TOTAL,
+  BLACKJACK_VALUE,
+} from './constants';
 
 /**
  * Generates a training scenario based on difficulty level
@@ -26,7 +33,7 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
   // Level 1: Hard totals only (12-17)
   if (level === 1) {
     // Generate hard hands (12-17 vs dealer 2-A)
-    const targetTotal = 12 + Math.floor(Math.random() * 6); // 12-17
+    const targetTotal = HARD_TOTAL_MIN + Math.floor(Math.random() * (HARD_TOTAL_MAX - HARD_TOTAL_MIN + 1));
     const playerCards = generateHardHand(targetTotal, deck);
     const dealerUpcard = getCard(true);
 
@@ -36,6 +43,7 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
       canDouble: playerCards.length === 2,
       canSplit: false,
       canSurrender: playerCards.length === 2,
+      scenarioStartTime: Date.now(),
     };
   }
 
@@ -45,10 +53,11 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
 
     if (useSoftHand) {
       // Soft hands A-2 through A-9
-      const secondCard = (2 + Math.floor(Math.random() * 8)).toString(); // 2-9
-      const playerCards = [
-        { ...deck[0], rank: 'A' as const, faceUp: true },
-        { ...deck[1], rank: secondCard as any, faceUp: true },
+      const secondCardValue = SOFT_SECOND_CARD_MIN + Math.floor(Math.random() * (SOFT_SECOND_CARD_MAX - SOFT_SECOND_CARD_MIN + 1));
+      const secondCard = secondCardValue.toString() as Rank;
+      const playerCards: Card[] = [
+        { ...deck[0], rank: 'A', faceUp: true },
+        { ...deck[1], rank: secondCard, faceUp: true },
       ];
       const dealerUpcard = getCard(true);
 
@@ -58,10 +67,11 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
         canDouble: true,
         canSplit: false,
         canSurrender: true,
+        scenarioStartTime: Date.now(),
       };
     } else {
       // Fall back to hard hand
-      const targetTotal = 12 + Math.floor(Math.random() * 6);
+      const targetTotal = HARD_TOTAL_MIN + Math.floor(Math.random() * (HARD_TOTAL_MAX - HARD_TOTAL_MIN + 1));
       const playerCards = generateHardHand(targetTotal, deck);
       const dealerUpcard = getCard(true);
 
@@ -71,6 +81,7 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
         canDouble: playerCards.length === 2,
         canSplit: false,
         canSurrender: playerCards.length === 2,
+        scenarioStartTime: Date.now(),
       };
     }
   }
@@ -79,13 +90,13 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
   if (level === 3) {
     const scenarioType = Math.random();
 
-    if (scenarioType < 0.33) {
+    if (scenarioType < LEVEL_3_PAIR_PROBABILITY) {
       // Generate pair
-      const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
+      const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
       const rank = ranks[Math.floor(Math.random() * ranks.length)];
-      const playerCards = [
-        { ...deck[0], rank: rank as any, faceUp: true },
-        { ...deck[1], rank: rank as any, faceUp: true },
+      const playerCards: Card[] = [
+        { ...deck[0], rank, faceUp: true },
+        { ...deck[1], rank, faceUp: true },
       ];
       const dealerUpcard = getCard(true);
 
@@ -95,13 +106,15 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
         canDouble: true,
         canSplit: true,
         canSurrender: true,
+        scenarioStartTime: Date.now(),
       };
-    } else if (scenarioType < 0.66) {
+    } else if (scenarioType < LEVEL_3_SOFT_PROBABILITY) {
       // Soft hand
-      const secondCard = (2 + Math.floor(Math.random() * 8)).toString();
-      const playerCards = [
-        { ...deck[0], rank: 'A' as const, faceUp: true },
-        { ...deck[1], rank: secondCard as any, faceUp: true },
+      const secondCardValue = SOFT_SECOND_CARD_MIN + Math.floor(Math.random() * (SOFT_SECOND_CARD_MAX - SOFT_SECOND_CARD_MIN + 1));
+      const secondCard = secondCardValue.toString() as Rank;
+      const playerCards: Card[] = [
+        { ...deck[0], rank: 'A', faceUp: true },
+        { ...deck[1], rank: secondCard, faceUp: true },
       ];
       const dealerUpcard = getCard(true);
 
@@ -111,10 +124,11 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
         canDouble: true,
         canSplit: false,
         canSurrender: true,
+        scenarioStartTime: Date.now(),
       };
     } else {
       // Hard hand
-      const targetTotal = 12 + Math.floor(Math.random() * 6);
+      const targetTotal = HARD_TOTAL_MIN + Math.floor(Math.random() * (HARD_TOTAL_MAX - HARD_TOTAL_MIN + 1));
       const playerCards = generateHardHand(targetTotal, deck);
       const dealerUpcard = getCard(true);
 
@@ -124,6 +138,7 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
         canDouble: playerCards.length === 2,
         canSplit: false,
         canSurrender: playerCards.length === 2,
+        scenarioStartTime: Date.now(),
       };
     }
   }
@@ -131,13 +146,13 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
   // Level 4: All scenarios including surrender focus
   const scenarioType = Math.random();
 
-  if (scenarioType < 0.25) {
+  if (scenarioType < LEVEL_4_PAIR_PROBABILITY) {
     // Pair
-    const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
+    const ranks: Rank[] = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'A'];
     const rank = ranks[Math.floor(Math.random() * ranks.length)];
-    const playerCards = [
-      { ...deck[0], rank: rank as any, faceUp: true },
-      { ...deck[1], rank: rank as any, faceUp: true },
+    const playerCards: Card[] = [
+      { ...deck[0], rank, faceUp: true },
+      { ...deck[1], rank, faceUp: true },
     ];
     const dealerUpcard = getCard(true);
 
@@ -147,13 +162,15 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
       canDouble: true,
       canSplit: true,
       canSurrender: true,
+      scenarioStartTime: Date.now(),
     };
-  } else if (scenarioType < 0.5) {
+  } else if (scenarioType < LEVEL_4_SOFT_PROBABILITY) {
     // Soft hand
-    const secondCard = (2 + Math.floor(Math.random() * 8)).toString();
-    const playerCards = [
-      { ...deck[0], rank: 'A' as const, faceUp: true },
-      { ...deck[1], rank: secondCard as any, faceUp: true },
+    const secondCardValue = SOFT_SECOND_CARD_MIN + Math.floor(Math.random() * (SOFT_SECOND_CARD_MAX - SOFT_SECOND_CARD_MIN + 1));
+    const secondCard = secondCardValue.toString() as Rank;
+    const playerCards: Card[] = [
+      { ...deck[0], rank: 'A', faceUp: true },
+      { ...deck[1], rank: secondCard, faceUp: true },
     ];
     const dealerUpcard = getCard(true);
 
@@ -163,10 +180,11 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
       canDouble: true,
       canSplit: false,
       canSurrender: true,
+      scenarioStartTime: Date.now(),
     };
-  } else if (scenarioType < 0.75) {
+  } else if (scenarioType < LEVEL_4_HARD_PROBABILITY) {
     // Hard hand
-    const targetTotal = 12 + Math.floor(Math.random() * 6);
+    const targetTotal = HARD_TOTAL_MIN + Math.floor(Math.random() * (HARD_TOTAL_MAX - HARD_TOTAL_MIN + 1));
     const playerCards = generateHardHand(targetTotal, deck);
     const dealerUpcard = getCard(true);
 
@@ -176,15 +194,16 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
       canDouble: playerCards.length === 2,
       canSplit: false,
       canSurrender: playerCards.length === 2,
+      scenarioStartTime: Date.now(),
     };
   } else {
     // Surrender scenario (hard 15-16 vs 9, 10, A)
     const playerTotal = Math.random() > 0.5 ? 15 : 16;
-    const dealerRanks = ['9', '10', 'A'];
+    const dealerRanks: Rank[] = ['9', '10', 'A'];
     const dealerRank = dealerRanks[Math.floor(Math.random() * dealerRanks.length)];
 
     const playerCards = generateHardHand(playerTotal, deck);
-    const dealerUpcard = { ...deck[10], rank: dealerRank as any, faceUp: true };
+    const dealerUpcard: Card = { ...deck[10], rank: dealerRank, faceUp: true };
 
     return {
       playerCards: playerCards.map(c => ({ ...c, faceUp: true })),
@@ -192,49 +211,68 @@ export function generateTrainingScenario(level: DifficultyLevel): TrainingScenar
       canDouble: playerCards.length === 2,
       canSplit: false,
       canSurrender: playerCards.length === 2,
+      scenarioStartTime: Date.now(),
     };
   }
 }
 
 /**
  * Generates a hard hand with a specific total
+ * Improved with better validation and no type assertions
  */
 function generateHardHand(targetTotal: number, deck: Card[]): Card[] {
-  // For simplicity, generate 2-3 card hard hands
-  const useThreeCards = targetTotal >= 12 && Math.random() > 0.5;
+  /**
+   * Helper to convert number to valid Rank
+   */
+  const numberToRank = (num: number): Rank | null => {
+    if (num >= 2 && num <= 10) return num.toString() as Rank;
+    if (num === 11) return 'J'; // Use face card for 11
+    return null;
+  };
 
-  if (useThreeCards && targetTotal >= 12 && targetTotal <= 21) {
+  // For simplicity, generate 2-3 card hard hands
+  const useThreeCards = targetTotal >= MIN_THREE_CARD_TOTAL && Math.random() > THREE_CARD_HAND_PROBABILITY;
+
+  if (useThreeCards && targetTotal >= MIN_THREE_CARD_TOTAL && targetTotal <= BLACKJACK_VALUE) {
     // Three card hand
-    const firstCard = 2 + Math.floor(Math.random() * Math.min(9, targetTotal - 6));
-    const secondCard = 2 + Math.floor(Math.random() * Math.min(9, targetTotal - firstCard - 4));
+    const firstCard = MIN_CARD_VALUE + Math.floor(Math.random() * Math.min(MAX_CARD_VALUE - 1, targetTotal - 6));
+    const secondCard = MIN_CARD_VALUE + Math.floor(Math.random() * Math.min(MAX_CARD_VALUE - 1, targetTotal - firstCard - 4));
     const thirdCard = targetTotal - firstCard - secondCard;
 
-    if (thirdCard >= 2 && thirdCard <= 10) {
+    const firstRank = numberToRank(firstCard);
+    const secondRank = numberToRank(secondCard);
+    const thirdRank = numberToRank(thirdCard);
+
+    if (firstRank && secondRank && thirdRank) {
       return [
-        { ...deck[0], rank: firstCard.toString() as any, faceUp: true },
-        { ...deck[1], rank: secondCard.toString() as any, faceUp: true },
-        { ...deck[2], rank: thirdCard.toString() as any, faceUp: true },
+        { ...deck[0], rank: firstRank, faceUp: true },
+        { ...deck[1], rank: secondRank, faceUp: true },
+        { ...deck[2], rank: thirdRank, faceUp: true },
       ];
     }
   }
 
   // Two card hand
-  const firstCard = 2 + Math.floor(Math.random() * Math.min(9, targetTotal - 2));
+  const firstCard = MIN_CARD_VALUE + Math.floor(Math.random() * Math.min(MAX_CARD_VALUE - 1, targetTotal - MIN_CARD_VALUE));
   const secondCard = targetTotal - firstCard;
 
-  if (secondCard >= 2 && secondCard <= 11) {
-    let secondRank = secondCard.toString();
-    if (secondCard === 11) secondRank = 'J'; // Use face card for 10
+  const firstRank = numberToRank(firstCard);
+  const secondRank = numberToRank(secondCard);
 
+  if (firstRank && secondRank) {
     return [
-      { ...deck[0], rank: firstCard.toString() as any, faceUp: true },
-      { ...deck[1], rank: secondRank as any, faceUp: true },
+      { ...deck[0], rank: firstRank, faceUp: true },
+      { ...deck[1], rank: secondRank, faceUp: true },
     ];
   }
 
-  // Fallback: just give two cards that sum close to target
+  // Fallback: safe default that will always work
+  // Generate a hand close to target (7 + something)
+  const fallbackSecondValue = Math.max(MIN_CARD_VALUE, Math.min(MAX_CARD_VALUE, targetTotal - 7));
+  const fallbackSecondRank = numberToRank(fallbackSecondValue) || '5';
+
   return [
-    { ...deck[0], rank: '7' as const, faceUp: true },
-    { ...deck[1], rank: (targetTotal - 7).toString() as any, faceUp: true },
+    { ...deck[0], rank: '7', faceUp: true },
+    { ...deck[1], rank: fallbackSecondRank, faceUp: true },
   ];
 }
