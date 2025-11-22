@@ -8,12 +8,20 @@
   --felt-dark: #0f2616;
 }
 
+/* Light mode - casino felt */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  background: linear-gradient(135deg, var(--felt-dark) 0%, var(--felt) 50%, var(--felt-light) 100%);
+  min-height: 100vh;
+}
+
+/* Dark mode */
+body.dark-mode {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #334155 100%);
 }
 
 @layer utilities {
@@ -22,5 +30,151 @@ body {
   }
   .backface-hidden {
     backface-visibility: hidden;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Card animations */
+@keyframes deal {
+  0% {
+    transform: translate(-100vw, -100vh) rotate(-15deg);
+    opacity: 0;
+  }
+  100% {
+    transform: translate(0, 0) rotate(0);
+    opacity: 1;
+  }
+}
+
+@keyframes flip {
+  0% {
+    transform: rotateY(0deg);
+  }
+  100% {
+    transform: rotateY(180deg);
+  }
+}
+
+@keyframes pulse-correct {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(34, 197, 94, 0);
+  }
+}
+
+@keyframes pulse-incorrect {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-5px); }
+  75% { transform: translateX(5px); }
+}
+
+@keyframes countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+.animate-deal-card {
+  animation: deal 0.3s ease-out forwards;
+}
+
+.animate-flip-card {
+  animation: flip 0.4s ease-in-out forwards;
+}
+
+.animate-pulse-correct {
+  animation: pulse-correct 0.5s ease-in-out;
+}
+
+.animate-pulse-incorrect {
+  animation: pulse-incorrect 0.5s ease-in-out;
+}
+
+.animate-shake {
+  animation: shake 0.3s ease-in-out;
+}
+
+/* Timer bar animation */
+.timer-bar {
+  transform-origin: left;
+  animation: countdown linear forwards;
+}
+
+/* Focus visible states */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+
+/* Mobile touch feedback */
+@media (hover: none) {
+  button:active {
+    transform: scale(0.95);
+    transition: transform 0.1s;
+  }
+}
+
+/* Gesture hint areas for mobile */
+.gesture-zone-left,
+.gesture-zone-right {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 60px;
+  height: 200px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.gesture-zone-left {
+  left: 0;
+  background: linear-gradient(to right, rgba(239, 68, 68, 0.1), transparent);
+}
+
+.gesture-zone-right {
+  right: 0;
+  background: linear-gradient(to left, rgba(34, 197, 94, 0.1), transparent);
+}
+
+/* Print styles for export */
+@media print {
+  body {
+    background: white !important;
+    color: black !important;
+  }
+
+  .no-print {
+    display: none !important;
   }
 }
