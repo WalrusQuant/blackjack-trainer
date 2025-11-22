@@ -37,8 +37,29 @@ export interface GameState {
 export interface ActionStats {
   correct: number;
   incorrect: number;
-  totalTime?: number; // Total time in ms for this action
-  avgTime?: number; // Average decision time in ms
+  totalTime?: number;
+  avgTime?: number;
+}
+
+export interface ScenarioStats {
+  correct: number;
+  incorrect: number;
+  totalTime?: number;
+  avgTime?: number;
+  lastSeen?: number;
+}
+
+export interface MistakeRecord {
+  id: string;
+  timestamp: number;
+  playerCards: Card[];
+  dealerUpcard: Card;
+  playerAction: PlayerAction;
+  correctAction: PlayerAction;
+  handType: HandType;
+  playerTotal: number;
+  decisionTime?: number;
+  sessionId?: string;
 }
 
 export interface Statistics {
@@ -57,7 +78,6 @@ export interface Statistics {
     soft: ActionStats;
     pair: ActionStats;
   };
-  // Enhanced statistics
   currentStreak: number;
   longestStreak: number;
   sessionStartTime?: number;
@@ -65,6 +85,19 @@ export interface Statistics {
   lastDecisionTime?: number;
   byDealerUpcard?: {
     [key: string]: { correct: number; incorrect: number };
+  };
+  // Enhanced: Per-scenario tracking for heatmaps
+  byScenario?: {
+    [key: string]: ScenarioStats; // key: "playerTotal-dealerCard-handType" e.g., "16-10-hard"
+  };
+  // Mistake log
+  mistakes?: MistakeRecord[];
+  // Speed records
+  speedRecords?: {
+    fastestCorrect?: number;
+    avgSpeed?: number;
+    totalTimeTracked?: number;
+    decisionsTracked?: number;
   };
 }
 
@@ -109,6 +142,7 @@ export interface FeedbackState {
   correctAction: PlayerAction | null;
   playerAction: PlayerAction | null;
   decisionTime?: number;
+  explanation?: string;
 }
 
 export interface UIState {
@@ -116,6 +150,138 @@ export interface UIState {
   showHints: boolean;
   isLoading: boolean;
   error: string | null;
+}
+
+// Training modes
+export type TrainingMode =
+  | 'basic'           // Standard basic strategy training
+  | 'counting'        // Card counting practice
+  | 'speed'           // Timed challenges
+  | 'flashcard'       // Quick-fire scenarios
+  | 'tournament'      // 100-hand challenge
+  | 'custom'          // Custom scenario selection
+  | 'mastery'         // Only weak spots
+  | 'deviation'       // Index play deviations
+  | 'mistakes';       // Review past mistakes
+
+// Session Management
+export interface SessionGoal {
+  type: 'hands' | 'accuracy' | 'time' | 'streak';
+  target: number;
+  achieved: boolean;
+}
+
+export interface TrainingSession {
+  id: string;
+  startTime: number;
+  endTime?: number;
+  mode: TrainingMode;
+  level: DifficultyLevel;
+  handsPlayed: number;
+  correctDecisions: number;
+  incorrectDecisions: number;
+  goals?: SessionGoal[];
+  mistakes: MistakeRecord[];
+  avgDecisionTime?: number;
+  // Card counting specific
+  countingAccuracy?: number;
+  trueCountAccuracy?: number;
+}
+
+// Card Counting
+export interface CardCountingState {
+  runningCount: number;
+  cardsDealt: Card[];
+  decksRemaining: number;
+  trueCount: number;
+  userRunningCount: number;
+  userTrueCount: number;
+  isCorrect: boolean | null;
+  feedback: string;
+  speed: number; // ms per card
+  totalCards: number;
+  correctCounts: number;
+  incorrectCounts: number;
+  mode: 'practice' | 'speed' | 'deviation';
+}
+
+export interface CountingStats {
+  totalAttempts: number;
+  correctAttempts: number;
+  avgSpeed: number; // ms per card
+  fastestShoe: number; // ms to count entire shoe
+  bestAccuracy: number;
+  sessionHistory: {
+    timestamp: number;
+    accuracy: number;
+    speed: number;
+    cardsDealt: number;
+  }[];
+}
+
+// Illustrious 18 Index Plays
+export interface IndexPlay {
+  id: string;
+  name: string;
+  playerHand: string; // e.g., "16", "15", "A,7" for soft 18
+  dealerUpcard: Rank;
+  basicStrategy: PlayerAction;
+  deviation: PlayerAction;
+  indexCount: number; // True count threshold
+  description: string;
+}
+
+// Speed Training
+export interface SpeedChallenge {
+  level: 'beginner' | 'intermediate' | 'advanced' | 'expert';
+  timeLimit: number; // ms
+  handsRequired: number;
+  accuracyRequired: number;
+}
+
+export interface SpeedRecord {
+  timestamp: number;
+  avgTime: number;
+  accuracy: number;
+  handsPlayed: number;
+  level: SpeedChallenge['level'];
+}
+
+// Custom Scenario
+export interface CustomScenarioFilter {
+  handTypes: HandType[];
+  playerTotals: number[];
+  dealerUpcards: Rank[];
+  actionsRequired: PlayerAction[];
+  maxAccuracy?: number; // Only show scenarios below this accuracy
+}
+
+// Analytics
+export interface HeatmapData {
+  playerTotal: number;
+  dealerUpcard: string;
+  handType: HandType;
+  accuracy: number;
+  total: number;
+  correct: number;
+}
+
+export interface TrendDataPoint {
+  timestamp: number;
+  accuracy: number;
+  handsPlayed: number;
+  avgDecisionTime: number;
+}
+
+// UI Settings
+export interface UISettings {
+  darkMode: boolean;
+  soundEnabled: boolean;
+  cardDesign: 'classic' | 'modern' | 'minimal';
+  showStrategyChart: boolean;
+  fullScreenMode: boolean;
+  animationsEnabled: boolean;
+  mobileGestures: boolean;
 }
 
 // State management types for useReducer
@@ -129,7 +295,17 @@ export type GameAction =
   | { type: 'SET_ERROR'; payload: string | null }
   | { type: 'UPDATE_STATS'; payload: Statistics }
   | { type: 'RESET_STATS' }
-  | { type: 'NEXT_HAND' };
+  | { type: 'NEXT_HAND' }
+  | { type: 'SET_TRAINING_MODE'; payload: TrainingMode }
+  | { type: 'START_SESSION'; payload: TrainingSession }
+  | { type: 'END_SESSION' }
+  | { type: 'UPDATE_SESSION'; payload: Partial<TrainingSession> }
+  | { type: 'SET_UI_SETTINGS'; payload: Partial<UISettings> }
+  | { type: 'SET_COUNTING_STATE'; payload: Partial<CardCountingState> }
+  | { type: 'SET_CUSTOM_FILTER'; payload: CustomScenarioFilter | null }
+  | { type: 'SET_SPEED_CHALLENGE'; payload: SpeedChallenge | null }
+  | { type: 'ADD_MISTAKE'; payload: MistakeRecord }
+  | { type: 'CLEAR_MISTAKES' };
 
 export interface TrainingScenario {
   playerCards: Card[];
@@ -138,6 +314,9 @@ export interface TrainingScenario {
   canSplit: boolean;
   canSurrender: boolean;
   scenarioStartTime?: number;
+  // For targeted training
+  targetedScenario?: boolean;
+  scenarioKey?: string;
 }
 
 export interface AppState {
@@ -145,5 +324,25 @@ export interface AppState {
   scenario: TrainingScenario | null;
   feedback: FeedbackState;
   stats: Statistics | null;
+  config: GameConfig;
+  // New state
+  trainingMode: TrainingMode;
+  currentSession: TrainingSession | null;
+  sessionHistory: TrainingSession[];
+  uiSettings: UISettings;
+  countingState: CardCountingState | null;
+  customFilter: CustomScenarioFilter | null;
+  speedChallenge: SpeedChallenge | null;
+  countingStats: CountingStats | null;
+}
+
+// Export/Import data structure
+export interface ExportData {
+  version: number;
+  exportDate: number;
+  statistics: Statistics;
+  sessions: TrainingSession[];
+  countingStats: CountingStats | null;
+  uiSettings: UISettings;
   config: GameConfig;
 }

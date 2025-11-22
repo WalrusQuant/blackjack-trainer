@@ -1,10 +1,23 @@
-import { Statistics, PlayerAction, VersionedStatistics, HandType } from './types';
+import {
+  Statistics,
+  PlayerAction,
+  VersionedStatistics,
+  HandType,
+  MistakeRecord,
+  Card,
+  ExportData,
+  UISettings,
+  GameConfig,
+  TrainingSession,
+  CountingStats,
+} from './types';
 import {
   STORAGE_KEY_STATS,
   CURRENT_STATS_VERSION,
   MIN_ACCURACY,
   MAX_ACCURACY,
 } from './constants';
+import { getScenarioKey } from './analytics';
 
 /**
  * Creates initial statistics object with enhanced tracking
@@ -31,6 +44,14 @@ export function createInitialStats(): Statistics {
       pair: { correct: 0, incorrect: 0, totalTime: 0, avgTime: 0 },
     },
     byDealerUpcard: {},
+    byScenario: {},
+    mistakes: [],
+    speedRecords: {
+      fastestCorrect: undefined,
+      avgSpeed: 0,
+      totalTimeTracked: 0,
+      decisionsTracked: 0,
+    },
   };
 }
 
@@ -53,7 +74,22 @@ function deepCloneStats(stats: Statistics): Statistics {
       pair: { ...stats.byHandType.pair },
     },
     byDealerUpcard: stats.byDealerUpcard ? { ...stats.byDealerUpcard } : {},
+    byScenario: stats.byScenario ? { ...stats.byScenario } : {},
+    mistakes: stats.mistakes ? [...stats.mistakes] : [],
+    speedRecords: stats.speedRecords ? { ...stats.speedRecords } : {
+      fastestCorrect: undefined,
+      avgSpeed: 0,
+      totalTimeTracked: 0,
+      decisionsTracked: 0,
+    },
   };
+}
+
+/**
+ * Generate a unique mistake ID
+ */
+function generateMistakeId(): string {
+  return `mistake_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 }
 
 /**
@@ -65,7 +101,12 @@ export function updateStatistics(
   handType: HandType,
   isCorrect: boolean,
   decisionTime?: number,
-  dealerUpcard?: string
+  dealerUpcard?: string,
+  playerTotal?: number,
+  playerCards?: Card[],
+  dealerCard?: Card,
+  correctAction?: PlayerAction,
+  sessionId?: string
 ): Statistics {
   // Deep clone to prevent mutation
   const newStats = deepCloneStats(stats);
@@ -86,6 +127,23 @@ export function updateStatistics(
     newStats.currentStreak = 0; // Reset streak
     newStats.byAction[action].incorrect++;
     newStats.byHandType[handType].incorrect++;
+
+    // Log mistake
+    if (playerCards && dealerCard && correctAction && playerTotal !== undefined) {
+      const mistake: MistakeRecord = {
+        id: generateMistakeId(),
+        timestamp: Date.now(),
+        playerCards,
+        dealerUpcard: dealerCard,
+        playerAction: action,
+        correctAction,
+        handType,
+        playerTotal,
+        decisionTime,
+        sessionId,
+      };
+      newStats.mistakes = [...(newStats.mistakes || []), mistake].slice(-500); // Keep last 500
+    }
   }
 
   // Update decision time tracking
@@ -103,6 +161,19 @@ export function updateStatistics(
     handStats.totalTime = (handStats.totalTime || 0) + decisionTime;
     const handTotal = handStats.correct + handStats.incorrect;
     handStats.avgTime = handStats.totalTime / handTotal;
+
+    // Update speed records
+    if (newStats.speedRecords) {
+      newStats.speedRecords.totalTimeTracked = (newStats.speedRecords.totalTimeTracked || 0) + decisionTime;
+      newStats.speedRecords.decisionsTracked = (newStats.speedRecords.decisionsTracked || 0) + 1;
+      newStats.speedRecords.avgSpeed = newStats.speedRecords.totalTimeTracked / newStats.speedRecords.decisionsTracked;
+
+      if (isCorrect) {
+        if (!newStats.speedRecords.fastestCorrect || decisionTime < newStats.speedRecords.fastestCorrect) {
+          newStats.speedRecords.fastestCorrect = decisionTime;
+        }
+      }
+    }
   }
 
   // Track by dealer upcard
@@ -114,6 +185,39 @@ export function updateStatistics(
       newStats.byDealerUpcard[dealerUpcard].correct++;
     } else {
       newStats.byDealerUpcard[dealerUpcard].incorrect++;
+    }
+  }
+
+  // Track by scenario (for heatmap)
+  if (playerTotal !== undefined && dealerUpcard) {
+    const scenarioKey = getScenarioKey(playerTotal, dealerUpcard, handType);
+
+    if (!newStats.byScenario) {
+      newStats.byScenario = {};
+    }
+
+    if (!newStats.byScenario[scenarioKey]) {
+      newStats.byScenario[scenarioKey] = {
+        correct: 0,
+        incorrect: 0,
+        totalTime: 0,
+        avgTime: 0,
+        lastSeen: Date.now(),
+      };
+    }
+
+    const scenarioStats = newStats.byScenario[scenarioKey];
+    if (isCorrect) {
+      scenarioStats.correct++;
+    } else {
+      scenarioStats.incorrect++;
+    }
+    scenarioStats.lastSeen = Date.now();
+
+    if (decisionTime !== undefined) {
+      scenarioStats.totalTime = (scenarioStats.totalTime || 0) + decisionTime;
+      const totalScenario = scenarioStats.correct + scenarioStats.incorrect;
+      scenarioStats.avgTime = scenarioStats.totalTime / totalScenario;
     }
   }
 
@@ -169,6 +273,19 @@ export function getDealerUpcardAccuracy(stats: Statistics, dealerUpcard: string)
 }
 
 /**
+ * Gets accuracy for a specific scenario
+ */
+export function getScenarioAccuracy(stats: Statistics, scenarioKey: string): number {
+  if (!stats.byScenario || !stats.byScenario[scenarioKey]) {
+    return -1; // No data
+  }
+  const data = stats.byScenario[scenarioKey];
+  const total = data.correct + data.incorrect;
+  if (total === 0) return -1;
+  return Math.round((data.correct / total) * 100);
+}
+
+/**
  * Validates and migrates statistics data
  */
 function validateAndMigrateStats(data: any): Statistics {
@@ -203,6 +320,18 @@ function validateAndMigrateStats(data: any): Statistics {
       }
 
       return migratedStats;
+    }
+
+    // Ensure new fields exist
+    if (!data.byScenario) data.byScenario = {};
+    if (!data.mistakes) data.mistakes = [];
+    if (!data.speedRecords) {
+      data.speedRecords = {
+        fastestCorrect: undefined,
+        avgSpeed: 0,
+        totalTimeTracked: 0,
+        decisionsTracked: 0,
+      };
     }
 
     return data as Statistics;
@@ -331,6 +460,90 @@ export function exportStatisticsCSV(stats: Statistics): string {
     const avgTime = data.avgTime ? Math.round(data.avgTime) : 0;
     lines.push(`${handType},${data.correct},${data.incorrect},${total},${accuracy}%,${avgTime}`);
   });
+  lines.push('');
+
+  // By scenario (heatmap data)
+  if (stats.byScenario && Object.keys(stats.byScenario).length > 0) {
+    lines.push('Statistics by Scenario');
+    lines.push('Scenario Key,Correct,Incorrect,Total,Accuracy,Avg Time (ms),Last Seen');
+    Object.entries(stats.byScenario).forEach(([key, data]) => {
+      const total = data.correct + data.incorrect;
+      const accuracy = total > 0 ? Math.round((data.correct / total) * 100) : 0;
+      const avgTime = data.avgTime ? Math.round(data.avgTime) : 0;
+      const lastSeen = data.lastSeen ? new Date(data.lastSeen).toISOString() : 'N/A';
+      lines.push(`${key},${data.correct},${data.incorrect},${total},${accuracy}%,${avgTime},${lastSeen}`);
+    });
+  }
 
   return lines.join('\n');
+}
+
+/**
+ * Export all data for backup
+ */
+export function exportAllData(
+  stats: Statistics,
+  sessions: TrainingSession[],
+  countingStats: CountingStats | null,
+  uiSettings: UISettings,
+  config: GameConfig
+): string {
+  const exportData: ExportData = {
+    version: 2,
+    exportDate: Date.now(),
+    statistics: stats,
+    sessions,
+    countingStats,
+    uiSettings,
+    config,
+  };
+  return JSON.stringify(exportData, null, 2);
+}
+
+/**
+ * Import data from backup
+ */
+export function importAllData(jsonString: string): ExportData | null {
+  try {
+    const data = JSON.parse(jsonString);
+    if (data.version && data.statistics) {
+      return data as ExportData;
+    }
+  } catch (e) {
+    console.error('Failed to parse import data:', e);
+  }
+  return null;
+}
+
+/**
+ * Clear specific mistake from history
+ */
+export function clearMistake(stats: Statistics, mistakeId: string): Statistics {
+  const newStats = deepCloneStats(stats);
+  newStats.mistakes = newStats.mistakes?.filter(m => m.id !== mistakeId) || [];
+  return newStats;
+}
+
+/**
+ * Clear all mistakes
+ */
+export function clearAllMistakes(stats: Statistics): Statistics {
+  const newStats = deepCloneStats(stats);
+  newStats.mistakes = [];
+  return newStats;
+}
+
+/**
+ * Get mistakes by scenario for review
+ */
+export function getMistakesByScenario(
+  mistakes: MistakeRecord[],
+  scenarioKey?: string
+): MistakeRecord[] {
+  if (!scenarioKey) return mistakes;
+
+  return mistakes.filter(m => {
+    const key = getScenarioKey(m.playerTotal, m.dealerUpcard.rank, m.handType);
+    return key === scenarioKey;
+  });
 }

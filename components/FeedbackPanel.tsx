@@ -14,8 +14,8 @@ export default function FeedbackPanel({ feedback }: FeedbackPanelProps) {
     <div
       className={`mb-6 p-4 rounded-lg border-2 ${
         feedback.correct
-          ? 'bg-green-900/70 border-green-500'
-          : 'bg-red-900/70 border-red-500'
+          ? 'bg-green-900/70 border-green-500 animate-pulse-correct'
+          : 'bg-red-900/70 border-red-500 animate-shake'
       }`}
       role="alert"
       aria-live="assertive"
@@ -44,15 +44,22 @@ export default function FeedbackPanel({ feedback }: FeedbackPanelProps) {
               {feedback.playerAction}
             </span>
             . The correct play is{' '}
-            <span className="font-bold uppercase" aria-label={`Correct choice: ${feedback.correctAction}`}>
+            <span className="font-bold uppercase text-yellow-300" aria-label={`Correct choice: ${feedback.correctAction}`}>
               {feedback.correctAction}
             </span>
             .
           </div>
         )}
+        {/* EV Explanation for mistakes */}
+        {!feedback.correct && feedback.explanation && (
+          <div className="mt-3 p-2 bg-black/30 rounded text-yellow-200 text-xs sm:text-sm">
+            💡 {feedback.explanation}
+          </div>
+        )}
         {feedback.decisionTime !== undefined && (
-          <div className="text-green-200 text-xs mt-2">
+          <div className={`text-xs mt-2 ${feedback.correct ? 'text-green-200' : 'text-red-200'}`}>
             Decision time: {(feedback.decisionTime / 1000).toFixed(1)}s
+            {feedback.correct && feedback.decisionTime < 2000 && ' ⚡ Fast!'}
           </div>
         )}
       </div>
