@@ -17,6 +17,7 @@ interface AnalyticsDashboardProps {
   stats: Statistics;
   sessions: TrainingSession[];
   onPracticeScenario?: (playerTotal: number, dealer: string, handType: HandType) => void;
+  onClose?: () => void;
   darkMode?: boolean;
 }
 
@@ -24,6 +25,7 @@ export default function AnalyticsDashboard({
   stats,
   sessions,
   onPracticeScenario,
+  onClose,
   darkMode = false,
 }: AnalyticsDashboardProps) {
   const [activeTab, setActiveTab] = useState<'overview' | 'heatmaps' | 'trends' | 'recommendations'>('overview');
@@ -45,6 +47,26 @@ export default function AnalyticsDashboard({
 
   return (
     <div className={`${bgClass} backdrop-blur-sm rounded-lg p-4 sm:p-6 ${borderClass} border`}>
+      {/* Header with Back Button */}
+      <div className="flex items-center justify-between mb-6">
+        {onClose && (
+          <button
+            onClick={onClose}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              darkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-green-700 hover:bg-green-600 text-white'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Training
+          </button>
+        )}
+        <h2 className={`text-xl font-bold ${textClass} ${onClose ? '' : 'w-full'}`}>Analytics Dashboard</h2>
+      </div>
+
       {/* Tabs */}
       <div className="flex flex-wrap gap-2 mb-6">
         {(['overview', 'heatmaps', 'trends', 'recommendations'] as const).map(tab => (

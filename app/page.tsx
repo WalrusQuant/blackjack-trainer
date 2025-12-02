@@ -7,7 +7,7 @@ import LevelSelector from '@/components/LevelSelector';
 import GameArea from '@/components/GameArea';
 import FeedbackPanel from '@/components/FeedbackPanel';
 import ActionButtons from '@/components/ActionButtons';
-import TrainingModeSelector from '@/components/TrainingModeSelector';
+import TabNavigation from '@/components/TabNavigation';
 import SessionPanel from '@/components/SessionPanel';
 import CardCountingTrainer from '@/components/CardCountingTrainer';
 import MistakeReview from '@/components/MistakeReview';
@@ -59,9 +59,10 @@ import { getScenarioKey } from '@/lib/analytics';
 export default function Home() {
   const [state, dispatch] = useReducer(gameReducer, createInitialState());
   const [scenarioStartTime, setScenarioStartTime] = useState<number>(Date.now());
-  const [showSettings, setShowSettings] = useState(false);
-  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [activeTab, setActiveTab] = useState<'training' | 'analytics' | 'settings'>('training');
   const [showStrategyChart, setShowStrategyChart] = useState(false);
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [countingStats, setCountingStats] = useState<CountingStats>(() => createCountingStats());
   const [sessionHistory, setSessionHistory] = useState<TrainingSession[]>([]);
   const [tournamentProgress, setTournamentProgress] = useState({ hands: 0, correct: 0 });
@@ -123,16 +124,18 @@ export default function Home() {
       // Mode shortcuts
       if (key === 'c') {
         dispatch({ type: 'SET_TRAINING_MODE', payload: 'counting' });
+        setActiveTab('training');
         return;
       }
       if (key === 'm') {
         dispatch({ type: 'SET_TRAINING_MODE', payload: 'mistakes' });
+        setActiveTab('training');
         return;
       }
       if (key === 'escape') {
         dispatch({ type: 'SET_TRAINING_MODE', payload: 'basic' });
-        setShowSettings(false);
-        setShowAnalytics(false);
+        setActiveTab('training');
+        setShowStrategyChart(false);
         return;
       }
 
@@ -332,9 +335,15 @@ export default function Home() {
     }
   }, [state.ui.level]);
 
+  // Handle tab change
+  const handleTabChange = useCallback((tab: 'training' | 'analytics' | 'settings') => {
+    setActiveTab(tab);
+  }, []);
+
   // Handle session management
   const handleStartSession = useCallback((session: TrainingSession) => {
     dispatch({ type: 'START_SESSION', payload: session });
+    setShowSessionModal(false);
   }, []);
 
   const handleEndSession = useCallback(() => {
@@ -345,6 +354,15 @@ export default function Home() {
       dispatch({ type: 'END_SESSION' });
     }
   }, [state.currentSession]);
+
+  // Handle session toggle from nav
+  const handleSessionToggle = useCallback(() => {
+    if (state.currentSession) {
+      handleEndSession();
+    } else {
+      setShowSessionModal(true);
+    }
+  }, [state.currentSession, handleEndSession]);
 
   // Handle stats reset
   const handleResetStats = useCallback(() => {
@@ -381,7 +399,7 @@ export default function Home() {
     dispatch({ type: 'SET_SCENARIO', payload: scenario });
     dispatch({ type: 'SET_TRAINING_MODE', payload: 'basic' });
     setScenarioStartTime(Date.now());
-    setShowAnalytics(false);
+    setActiveTab('training');
   }, [state.ui.level]);
 
   // Handle counting stats update
@@ -435,10 +453,10 @@ export default function Home() {
 
   const darkMode = state.uiSettings.darkMode;
 
-  // Render based on training mode
+  // Render based on active tab and training mode
   const renderMainContent = () => {
     // Settings panel
-    if (showSettings) {
+    if (activeTab === 'settings') {
       return (
         <SettingsPanel
           settings={state.uiSettings}
@@ -448,23 +466,26 @@ export default function Home() {
           onSettingsChange={(s) => dispatch({ type: 'SET_UI_SETTINGS', payload: s })}
           onImportData={handleImportData}
           onResetAll={handleResetAll}
+          onClose={() => setActiveTab('training')}
           darkMode={darkMode}
         />
       );
     }
 
     // Analytics dashboard
-    if (showAnalytics) {
+    if (activeTab === 'analytics') {
       return (
         <AnalyticsDashboard
           stats={state.stats!}
           sessions={sessionHistory}
           onPracticeScenario={handlePracticeScenario}
+          onClose={() => setActiveTab('training')}
           darkMode={darkMode}
         />
       );
     }
 
+    // Training modes
     // Card counting mode
     if (state.trainingMode === 'counting' || state.trainingMode === 'deviation') {
       return (
@@ -520,7 +541,7 @@ export default function Home() {
     );
 
     return (
-      <>
+      <div className="flex flex-col items-center justify-center flex-1">
         {/* Tournament Progress */}
         {state.trainingMode === 'tournament' && (
           <div className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-800' : 'bg-green-900/50'} text-center`}>
@@ -531,20 +552,24 @@ export default function Home() {
           </div>
         )}
 
-        {/* Level Selector */}
+        {/* Level Selector - Compact inline */}
         {state.trainingMode !== 'tournament' && (
-          <LevelSelector
-            currentLevel={state.ui.level}
-            onLevelChange={handleLevelChange}
-            adaptiveSuggestion={adaptiveSuggestion}
-          />
+          <div className="mb-4">
+            <LevelSelector
+              currentLevel={state.ui.level}
+              onLevelChange={handleLevelChange}
+              adaptiveSuggestion={adaptiveSuggestion}
+            />
+          </div>
         )}
 
-        {/* Game Area */}
-        <GameArea
-          dealerCard={state.scenario.dealerUpcard}
-          playerCards={state.scenario.playerCards}
-        />
+        {/* Game Area - Cards front and center */}
+        <div className="w-full max-w-2xl">
+          <GameArea
+            dealerCard={state.scenario.dealerUpcard}
+            playerCards={state.scenario.playerCards}
+          />
+        </div>
 
         {/* Feedback */}
         <FeedbackPanel feedback={state.feedback} />
@@ -558,7 +583,7 @@ export default function Home() {
         />
 
         {/* Hint Toggle */}
-        <div className="text-center">
+        <div className="text-center mt-4">
           <button
             onClick={() => dispatch({ type: 'TOGGLE_HINTS' })}
             className="text-green-300 hover:text-green-200 text-sm underline focus:outline-none focus:ring-2 focus:ring-green-400 rounded px-2 py-1"
@@ -576,88 +601,55 @@ export default function Home() {
             </div>
           )}
         </div>
-      </>
+      </div>
     );
   };
 
   return (
     <ErrorBoundary>
       <main className="min-h-screen p-4 flex flex-col">
-        {/* Header */}
-        <header className="mb-4 flex items-center justify-between flex-wrap gap-2">
-          <div>
-            <h1 className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-gray-100' : 'text-white'}`}>
-              Blackjack Trainer Pro
-            </h1>
-            <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-green-200'}`}>
-              Master basic strategy through deliberate practice
-            </p>
-          </div>
-          <div className="flex gap-2">
-            <button
-              onClick={() => setShowStrategyChart(!showStrategyChart)}
-              className={`px-3 py-1 rounded text-sm ${
-                darkMode ? 'bg-gray-700 text-gray-300' : 'bg-green-700 text-white'
-              } hover:opacity-80`}
-            >
-              Chart
-            </button>
-            <button
-              onClick={() => { setShowAnalytics(!showAnalytics); setShowSettings(false); }}
-              className={`px-3 py-1 rounded text-sm ${
-                showAnalytics ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-green-700 text-white'
-              } hover:opacity-80`}
-            >
-              Analytics
-            </button>
-            <button
-              onClick={() => { setShowSettings(!showSettings); setShowAnalytics(false); }}
-              className={`px-3 py-1 rounded text-sm ${
-                showSettings ? 'bg-blue-600 text-white' : darkMode ? 'bg-gray-700 text-gray-300' : 'bg-green-700 text-white'
-              } hover:opacity-80`}
-            >
-              Settings
-            </button>
-          </div>
+        {/* Header - Slim */}
+        <header className="mb-2 text-center">
+          <h1 className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-gray-100' : 'text-white'}`}>
+            Blackjack Trainer Pro
+          </h1>
+          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-green-200'}`}>
+            Master basic strategy through deliberate practice
+          </p>
         </header>
 
-        {/* Stats Bar */}
-        <StatsBar
-          stats={state.stats}
-          onReset={handleResetStats}
-          onExport={handleExportStats}
+        {/* Tab Navigation */}
+        <TabNavigation
+          activeTab={activeTab}
+          currentMode={state.trainingMode}
+          currentSession={state.currentSession}
+          darkMode={darkMode}
+          onTabChange={handleTabChange}
+          onModeChange={handleModeChange}
+          onChartToggle={() => setShowStrategyChart(!showStrategyChart)}
+          onStartSession={handleSessionToggle}
+          onViewHistory={() => setShowHistoryModal(true)}
+          showChart={showStrategyChart}
         />
 
-        {/* Training Mode Selector */}
-        {!showSettings && !showAnalytics && (
-          <div className="mb-4">
-            <TrainingModeSelector
-              currentMode={state.trainingMode}
-              onModeChange={handleModeChange}
-              darkMode={darkMode}
-            />
-          </div>
-        )}
-
-        {/* Session Panel */}
-        {!showSettings && !showAnalytics && state.trainingMode !== 'counting' && state.trainingMode !== 'speed' && (
-          <div className="mb-4">
-            <SessionPanel
-              currentSession={state.currentSession}
-              sessionHistory={sessionHistory}
-              currentMode={state.trainingMode}
-              currentLevel={state.ui.level}
-              onStartSession={handleStartSession}
-              onEndSession={handleEndSession}
-              darkMode={darkMode}
-            />
-          </div>
-        )}
-
-        {/* Main Content */}
-        <div className="flex-1">
+        {/* Main Content - Centered and focused */}
+        <div className="flex-1 flex flex-col">
           {renderMainContent()}
         </div>
+
+        {/* Stats Footer - Compact at bottom */}
+        {activeTab === 'training' && (
+          <div className="mt-4">
+            <StatsBar
+              stats={state.stats}
+              currentSession={state.currentSession}
+              onReset={handleResetStats}
+              onExport={handleExportStats}
+              darkMode={darkMode}
+              compact={true}
+            />
+          </div>
+        )}
 
         {/* Strategy Chart Overlay */}
         {(showStrategyChart || state.uiSettings.showStrategyChart) && (
@@ -670,8 +662,82 @@ export default function Home() {
           />
         )}
 
+        {/* Session Modal */}
+        {showSessionModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-green-900'} rounded-lg p-6 max-w-md w-full`}>
+              <SessionPanel
+                currentSession={state.currentSession}
+                sessionHistory={sessionHistory}
+                currentMode={state.trainingMode}
+                currentLevel={state.ui.level}
+                onStartSession={handleStartSession}
+                onEndSession={handleEndSession}
+                darkMode={darkMode}
+              />
+              <button
+                onClick={() => setShowSessionModal(false)}
+                className="mt-4 w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* History Modal */}
+        {showHistoryModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className={`${darkMode ? 'bg-gray-800' : 'bg-green-900'} rounded-lg p-6 max-w-2xl w-full max-h-[80vh] overflow-y-auto`}>
+              <h2 className={`text-xl font-bold ${darkMode ? 'text-gray-100' : 'text-white'} mb-4`}>
+                Session History
+              </h2>
+              {sessionHistory.length === 0 ? (
+                <p className={darkMode ? 'text-gray-400' : 'text-green-200'}>No sessions yet.</p>
+              ) : (
+                <div className="space-y-3">
+                  {sessionHistory.slice(0, 20).map((session) => (
+                    <div
+                      key={session.id}
+                      className={`p-3 rounded ${darkMode ? 'bg-gray-700' : 'bg-green-800/50'}`}
+                    >
+                      <div className="flex justify-between items-center">
+                        <span className={darkMode ? 'text-gray-200' : 'text-white'}>
+                          {new Date(session.startTime).toLocaleDateString()}
+                        </span>
+                        <span className={`font-bold ${
+                          session.handsPlayed > 0
+                            ? Math.round((session.correctDecisions / session.handsPlayed) * 100) >= 90
+                              ? 'text-green-400'
+                              : Math.round((session.correctDecisions / session.handsPlayed) * 100) >= 70
+                              ? 'text-yellow-400'
+                              : 'text-red-400'
+                            : darkMode ? 'text-gray-400' : 'text-green-200'
+                        }`}>
+                          {session.handsPlayed > 0
+                            ? `${Math.round((session.correctDecisions / session.handsPlayed) * 100)}%`
+                            : '-'}
+                        </span>
+                      </div>
+                      <div className={`text-sm ${darkMode ? 'text-gray-400' : 'text-green-200'}`}>
+                        {session.handsPlayed} hands | {session.correctDecisions} correct
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <button
+                onClick={() => setShowHistoryModal(false)}
+                className="mt-4 w-full px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Mobile gesture zones (visual hint) */}
-        {state.uiSettings.mobileGestures && !state.feedback.show && state.trainingMode === 'basic' && (
+        {state.uiSettings.mobileGestures && !state.feedback.show && state.trainingMode === 'basic' && activeTab === 'training' && (
           <>
             <div className="gesture-zone-left" />
             <div className="gesture-zone-right" />

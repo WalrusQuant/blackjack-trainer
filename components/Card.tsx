@@ -32,27 +32,24 @@ export default function Card({ card, delay = 0 }: CardProps) {
 
   return (
     <div
-      className="relative w-16 h-24 sm:w-20 sm:h-28 rounded-lg shadow-lg bg-white border-2 border-gray-300 animate-deal-card"
+      className="relative w-16 h-24 sm:w-20 sm:h-28 rounded-lg shadow-lg bg-white border-2 border-gray-300 animate-deal-card overflow-hidden"
       style={{ animationDelay: `${delay}ms` }}
     >
-      {/* Card face */}
-      <div className="absolute inset-0 p-1 sm:p-2 flex flex-col">
-        {/* Top left corner */}
-        <div className={`text-left ${colorClass}`}>
-          <div className="text-lg sm:text-xl font-bold leading-none">{card.rank}</div>
-          <div className="text-xl sm:text-2xl leading-none">{card.suit}</div>
-        </div>
+      {/* Top left corner */}
+      <div className={`absolute top-1 left-1.5 text-center ${colorClass}`}>
+        <div className="text-xs sm:text-sm font-bold leading-none">{card.rank}</div>
+        <div className="text-xs sm:text-sm leading-none">{card.suit}</div>
+      </div>
 
-        {/* Center suit */}
-        <div className={`flex-1 flex items-center justify-center ${colorClass}`}>
-          <div className="text-3xl sm:text-4xl">{card.suit}</div>
-        </div>
+      {/* Center suit */}
+      <div className={`absolute inset-0 flex items-center justify-center ${colorClass}`}>
+        <div className="text-2xl sm:text-3xl">{card.suit}</div>
+      </div>
 
-        {/* Bottom right corner (rotated) */}
-        <div className={`text-right transform rotate-180 ${colorClass}`}>
-          <div className="text-lg sm:text-xl font-bold leading-none">{card.rank}</div>
-          <div className="text-xl sm:text-2xl leading-none">{card.suit}</div>
-        </div>
+      {/* Bottom right corner (rotated) */}
+      <div className={`absolute bottom-1 right-1.5 text-center rotate-180 ${colorClass}`}>
+        <div className="text-xs sm:text-sm font-bold leading-none">{card.rank}</div>
+        <div className="text-xs sm:text-sm leading-none">{card.suit}</div>
       </div>
     </div>
   );

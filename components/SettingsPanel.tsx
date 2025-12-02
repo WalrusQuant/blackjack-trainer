@@ -13,6 +13,7 @@ interface SettingsPanelProps {
   onSettingsChange: (settings: Partial<UISettings>) => void;
   onImportData: (data: any) => void;
   onResetAll: () => void;
+  onClose?: () => void;
   darkMode?: boolean;
 }
 
@@ -24,6 +25,7 @@ export default function SettingsPanel({
   onSettingsChange,
   onImportData,
   onResetAll,
+  onClose,
   darkMode = false,
 }: SettingsPanelProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -97,7 +99,25 @@ export default function SettingsPanel({
 
   return (
     <div className={`${bgClass} backdrop-blur-sm rounded-lg p-6 ${borderClass} border`}>
-      <h2 className={`text-xl font-bold ${textClass} mb-6`}>Settings</h2>
+      {/* Header with Back Button */}
+      <div className="flex items-center justify-between mb-6">
+        {onClose && (
+          <button
+            onClick={onClose}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-colors ${
+              darkMode
+                ? 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                : 'bg-green-700 hover:bg-green-600 text-white'
+            }`}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+            Back to Training
+          </button>
+        )}
+        <h2 className={`text-xl font-bold ${textClass}`}>Settings</h2>
+      </div>
 
       {/* Display Settings */}
       <div className="mb-6">
