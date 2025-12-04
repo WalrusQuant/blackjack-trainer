@@ -92,7 +92,7 @@ export default function TabNavigation({
   };
 
   return (
-    <nav className={`${bgClass} backdrop-blur-sm rounded-lg ${borderClass} border mb-4`}>
+    <nav className={`${bgClass} backdrop-blur-sm rounded-lg ${borderClass} border mb-4 relative z-40`}>
       <div className="flex items-center justify-between px-2 py-1">
         {/* Main Tabs */}
         <div className="flex items-center gap-1">
