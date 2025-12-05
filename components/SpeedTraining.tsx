@@ -38,6 +38,13 @@ function saveSpeedRecords(records: SpeedRecord[]): void {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(records.slice(-100)));
 }
 
+// Final results for a completed challenge
+interface ChallengeResult {
+  handsPlayed: number;
+  correctCount: number;
+  totalTime: number;
+}
+
 export default function SpeedTraining({
   stats,
   level,
@@ -54,9 +61,14 @@ export default function SpeedTraining({
   const [feedback, setFeedback] = useState<{ correct: boolean; message: string } | null>(null);
   const [records, setRecords] = useState<SpeedRecord[]>(() => loadSpeedRecords());
   const [showResults, setShowResults] = useState(false);
+  const [finalResult, setFinalResult] = useState<ChallengeResult | null>(null);
 
   const scenarioStartRef = useRef<number>(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  // Refs to track current values for use in callbacks
+  const handsCompletedRef = useRef(0);
+  const correctCountRef = useRef(0);
+  const totalTimeRef = useRef(0);
 
   const bgClass = darkMode ? 'bg-gray-800' : 'bg-green-900/50';
   const textClass = darkMode ? 'text-gray-200' : 'text-white';
@@ -101,11 +113,19 @@ export default function SpeedTraining({
     );
 
     setFeedback({ correct: false, message: `Time's up! Correct: ${correctAction}` });
-    setHandsCompleted(prev => prev + 1);
+
+    // Update both state and ref
+    const newHandsCompleted = handsCompletedRef.current + 1;
+    handsCompletedRef.current = newHandsCompleted;
+    setHandsCompleted(newHandsCompleted);
 
     setTimeout(() => {
-      if (handsCompleted + 1 >= (challenge?.handsRequired || 0)) {
-        endChallenge();
+      if (newHandsCompleted >= (challenge?.handsRequired || 0)) {
+        endChallenge({
+          handsPlayed: handsCompletedRef.current,
+          correctCount: correctCountRef.current,
+          totalTime: totalTimeRef.current,
+        });
       } else {
         startHand();
       }
@@ -135,17 +155,26 @@ export default function SpeedTraining({
       message: isCorrect ? `Correct! (${(decisionTime / 1000).toFixed(1)}s)` : `Wrong! Correct: ${correctAction}`,
     });
 
+    // Update both state and refs
     if (isCorrect) {
-      setCorrectCount(prev => prev + 1);
-      setTotalTime(prev => prev + decisionTime);
+      correctCountRef.current += 1;
+      totalTimeRef.current += decisionTime;
+      setCorrectCount(correctCountRef.current);
+      setTotalTime(totalTimeRef.current);
     }
 
-    setHandsCompleted(prev => prev + 1);
+    const newHandsCompleted = handsCompletedRef.current + 1;
+    handsCompletedRef.current = newHandsCompleted;
+    setHandsCompleted(newHandsCompleted);
     onDecision(action, isCorrect, decisionTime);
 
     setTimeout(() => {
-      if (handsCompleted + 1 >= (challenge?.handsRequired || 0)) {
-        endChallenge();
+      if (newHandsCompleted >= (challenge?.handsRequired || 0)) {
+        endChallenge({
+          handsPlayed: handsCompletedRef.current,
+          correctCount: correctCountRef.current,
+          totalTime: totalTimeRef.current,
+        });
       } else {
         startHand();
       }
@@ -153,20 +182,21 @@ export default function SpeedTraining({
   };
 
   // End challenge and record results
-  const endChallenge = () => {
+  const endChallenge = (result: ChallengeResult) => {
     setIsRunning(false);
+    setFinalResult(result);
     setShowResults(true);
 
     if (!challenge) return;
 
-    const accuracy = handsCompleted > 0 ? Math.round((correctCount / handsCompleted) * 100) : 0;
-    const avgTime = correctCount > 0 ? totalTime / correctCount : 0;
+    const accuracy = result.handsPlayed > 0 ? Math.round((result.correctCount / result.handsPlayed) * 100) : 0;
+    const avgTime = result.correctCount > 0 ? result.totalTime / result.correctCount : 0;
 
     const newRecord: SpeedRecord = {
       timestamp: Date.now(),
       avgTime,
       accuracy,
-      handsPlayed: handsCompleted,
+      handsPlayed: result.handsPlayed,
       level: challenge.level,
     };
 
@@ -182,6 +212,11 @@ export default function SpeedTraining({
     setCorrectCount(0);
     setTotalTime(0);
     setShowResults(false);
+    setFinalResult(null);
+    // Reset refs
+    handsCompletedRef.current = 0;
+    correctCountRef.current = 0;
+    totalTimeRef.current = 0;
     setIsRunning(true);
   };
 
@@ -207,9 +242,9 @@ export default function SpeedTraining({
   };
 
   // Results screen
-  if (showResults && challenge) {
-    const accuracy = handsCompleted > 0 ? Math.round((correctCount / handsCompleted) * 100) : 0;
-    const avgTime = correctCount > 0 ? totalTime / correctCount : 0;
+  if (showResults && challenge && finalResult) {
+    const accuracy = finalResult.handsPlayed > 0 ? Math.round((finalResult.correctCount / finalResult.handsPlayed) * 100) : 0;
+    const avgTime = finalResult.correctCount > 0 ? finalResult.totalTime / finalResult.correctCount : 0;
     const passed = accuracy >= challenge.accuracyRequired;
     const bestRecord = getBestRecord(challenge.level);
     const isNewRecord = bestRecord && avgTime < bestRecord.avgTime && passed;

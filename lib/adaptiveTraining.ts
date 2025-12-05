@@ -112,7 +112,8 @@ export function generateTargetedScenario(
   const isPair = handType === 'pair';
   const canDouble = playerCards.length === 2;
   const canSplit = isPair && level >= 3;
-  const canSurrender = level === 4 && !isPair;
+  // Surrender is only legal on the first two cards
+  const canSurrender = level === 4 && !isPair && playerCards.length === 2;
 
   return {
     playerCards,
