@@ -15,17 +15,17 @@ export default function GameArea({ dealerCard, playerCards }: GameAreaProps) {
   const dealerHandValue = calculateHandValue([dealerCard]);
 
   return (
-    <div className="flex-1 flex flex-col items-center justify-center gap-8 sm:gap-12">
+    <div className="flex flex-col items-center gap-3 sm:gap-4">
       {/* Dealer Section */}
       <div className="text-center" role="region" aria-label="Dealer's cards">
-        <div className="text-green-200 text-sm sm:text-base mb-3" id="dealer-label">
+        <div className="text-green-200 text-xs sm:text-sm mb-1" id="dealer-label">
           Dealer Shows
         </div>
         <div className="flex justify-center gap-2" role="group" aria-labelledby="dealer-label">
           <Card card={dealerCard} />
         </div>
         <div
-          className="mt-2 text-white text-lg font-semibold"
+          className="mt-1 text-white text-base font-semibold"
           aria-label={`Dealer has ${dealerHandValue.value}`}
         >
           {dealerHandValue.value}
@@ -33,13 +33,13 @@ export default function GameArea({ dealerCard, playerCards }: GameAreaProps) {
       </div>
 
       {/* VS Divider */}
-      <div className="text-green-300 text-xl sm:text-2xl font-bold" aria-hidden="true">
-        VS
+      <div className="text-green-300/60 text-sm font-bold" aria-hidden="true">
+        vs
       </div>
 
       {/* Player Section */}
       <div className="text-center" role="region" aria-label="Your cards">
-        <div className="text-green-200 text-sm sm:text-base mb-3" id="player-label">
+        <div className="text-green-200 text-xs sm:text-sm mb-1" id="player-label">
           Your Hand
         </div>
         <div className="flex justify-center gap-2" role="group" aria-labelledby="player-label">
@@ -47,7 +47,7 @@ export default function GameArea({ dealerCard, playerCards }: GameAreaProps) {
             <Card key={idx} card={card} delay={idx * 100} />
           ))}
         </div>
-        <div className="mt-2 text-white text-lg font-semibold">
+        <div className="mt-1 text-white text-base font-semibold">
           <span
             aria-label={`Your hand value: ${getHandValueDisplay(playerHandValue)}${
               playerHandValue.isSoft ? ' (soft)' : ''

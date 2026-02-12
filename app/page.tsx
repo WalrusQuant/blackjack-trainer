@@ -541,11 +541,11 @@ export default function Home() {
     );
 
     return (
-      <div className="flex flex-col items-center justify-center flex-1">
+      <div className="flex flex-col items-center justify-center flex-1 min-h-0 gap-3">
         {/* Tournament Progress */}
         {state.trainingMode === 'tournament' && (
-          <div className={`mb-4 p-3 rounded ${darkMode ? 'bg-gray-800' : 'bg-green-900/50'} text-center`}>
-            <span className="text-white">Tournament Progress: </span>
+          <div className={`px-3 py-1.5 rounded text-sm ${darkMode ? 'bg-gray-800' : 'bg-green-900/50'} text-center`}>
+            <span className="text-white">Tournament: </span>
             <span className="font-bold text-yellow-400">{tournamentProgress.hands}/100</span>
             <span className="text-white"> | Correct: </span>
             <span className="font-bold text-green-400">{tournamentProgress.correct}</span>
@@ -554,13 +554,11 @@ export default function Home() {
 
         {/* Level Selector - Compact inline */}
         {state.trainingMode !== 'tournament' && (
-          <div className="mb-4">
-            <LevelSelector
-              currentLevel={state.ui.level}
-              onLevelChange={handleLevelChange}
-              adaptiveSuggestion={adaptiveSuggestion}
-            />
-          </div>
+          <LevelSelector
+            currentLevel={state.ui.level}
+            onLevelChange={handleLevelChange}
+            adaptiveSuggestion={adaptiveSuggestion}
+          />
         )}
 
         {/* Game Area - Cards front and center */}
@@ -583,39 +581,30 @@ export default function Home() {
         />
 
         {/* Hint Toggle */}
-        <div className="text-center mt-4">
-          <button
-            onClick={() => dispatch({ type: 'TOGGLE_HINTS' })}
-            className="text-green-300 hover:text-green-200 text-sm underline focus:outline-none focus:ring-2 focus:ring-green-400 rounded px-2 py-1"
-            aria-label={state.ui.showHints ? 'Hide hints' : 'Show hints'}
-          >
-            {state.ui.showHints ? 'Hide' : 'Show'} Hints
-          </button>
-          {state.ui.showHints && !state.feedback.show && (
-            <div className="mt-2 text-green-200 text-xs sm:text-sm">
-              Think about: Is this a hard or soft hand? What&apos;s the dealer showing?
-              <br />
-              <span className="text-green-300 text-xs">
-                Keyboard: H=Hit, S=Stand, D=Double, P=Split, R=Surrender | 1-4=Level | C=Counting | M=Mistakes
-              </span>
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => dispatch({ type: 'TOGGLE_HINTS' })}
+          className="text-green-300/60 hover:text-green-200 text-xs underline focus:outline-none focus:ring-2 focus:ring-green-400 rounded px-2 py-0.5"
+          aria-label={state.ui.showHints ? 'Hide hints' : 'Show hints'}
+        >
+          {state.ui.showHints ? 'Hide' : 'Show'} Hints
+        </button>
+        {state.ui.showHints && !state.feedback.show && (
+          <div className="text-green-200/70 text-xs text-center">
+            H=Hit S=Stand D=Double P=Split R=Surrender | 1-4=Level
+          </div>
+        )}
       </div>
     );
   };
 
   return (
     <ErrorBoundary>
-      <main className="min-h-screen p-4 flex flex-col">
+      <main className="h-screen max-h-screen p-3 flex flex-col overflow-hidden">
         {/* Header - Slim */}
-        <header className="mb-2 text-center">
-          <h1 className={`text-2xl sm:text-3xl font-bold ${darkMode ? 'text-gray-100' : 'text-white'}`}>
+        <header className="mb-1 text-center">
+          <h1 className={`text-xl sm:text-2xl font-bold ${darkMode ? 'text-gray-100' : 'text-white'}`}>
             Blackjack Trainer Pro
           </h1>
-          <p className={`text-sm ${darkMode ? 'text-gray-400' : 'text-green-200'}`}>
-            Master basic strategy through deliberate practice
-          </p>
         </header>
 
         {/* Tab Navigation */}
@@ -633,13 +622,13 @@ export default function Home() {
         />
 
         {/* Main Content - Centered and focused */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col min-h-0">
           {renderMainContent()}
         </div>
 
-        {/* Stats Footer - Compact at bottom */}
+        {/* Stats Footer - Always visible at bottom */}
         {activeTab === 'training' && (
-          <div className="mt-4">
+          <div className="mt-2 shrink-0">
             <StatsBar
               stats={state.stats}
               currentSession={state.currentSession}

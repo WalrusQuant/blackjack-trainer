@@ -23,14 +23,12 @@ export default function LevelSelector({
 }: LevelSelectorProps) {
   return (
     <div
-      className="bg-green-900/50 backdrop-blur-sm rounded-lg p-3 sm:p-4 mb-6 border border-green-700"
+      className="bg-green-900/50 backdrop-blur-sm rounded-lg px-3 py-2 border border-green-700"
       role="region"
       aria-label="Difficulty level selection"
     >
-      <div className="text-green-200 text-sm mb-2" id="difficulty-label">
-        Difficulty Level
-      </div>
-      <div className="flex flex-wrap gap-2" role="group" aria-labelledby="difficulty-label">
+      <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Difficulty level selection">
+        <span className="text-green-200 text-xs sm:text-sm" id="difficulty-label">Level</span>
         {[1, 2, 3, 4].map((l) => {
           const level = l as DifficultyLevel;
           const isCurrentLevel = currentLevel === level;
@@ -60,14 +58,14 @@ export default function LevelSelector({
           );
         })}
       </div>
-      <div className="mt-2 text-green-200 text-xs sm:text-sm" aria-live="polite">
-        {LEVEL_DESCRIPTIONS[currentLevel]}
+      <span className="text-green-200/70 text-xs hidden sm:inline ml-2" aria-live="polite">
+        — {LEVEL_DESCRIPTIONS[currentLevel]}
         {adaptiveSuggestion && adaptiveSuggestion !== currentLevel && (
-          <span className="ml-2 text-yellow-300">
-            (💡 Try Level {adaptiveSuggestion} based on your performance)
+          <span className="ml-1 text-yellow-300">
+            (Try Level {adaptiveSuggestion})
           </span>
         )}
-      </div>
+      </span>
     </div>
   );
 }

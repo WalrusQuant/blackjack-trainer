@@ -12,7 +12,7 @@ export default function FeedbackPanel({ feedback }: FeedbackPanelProps) {
 
   return (
     <div
-      className={`mb-6 p-4 rounded-lg border-2 ${
+      className={`p-3 rounded-lg border-2 ${
         feedback.correct
           ? 'bg-green-900/70 border-green-500 animate-pulse-correct'
           : 'bg-red-900/70 border-red-500 animate-shake'

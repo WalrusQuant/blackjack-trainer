@@ -60,13 +60,13 @@ export default function ActionButtons({
   }, [availableActions, onAction, onNextHand, showingFeedback]);
 
   return (
-    <div className="flex flex-wrap justify-center gap-3 mb-6" role="group" aria-label="Game actions">
+    <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="Game actions">
       {!showingFeedback ? (
         availableActions.map((action) => (
           <button
             key={action}
             onClick={() => onAction(action)}
-            className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg transition-colors uppercase text-sm sm:text-base min-w-[100px] focus:ring-2 focus:ring-blue-400 focus:outline-none"
+            className="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-lg transition-colors uppercase text-sm sm:text-base min-w-[90px] focus:ring-2 focus:ring-blue-400 focus:outline-none"
             aria-label={`${ACTION_LABELS[action]} (Press ${ACTION_HOTKEYS[action].toUpperCase()})`}
           >
             {ACTION_LABELS[action]}
@@ -76,7 +76,7 @@ export default function ActionButtons({
       ) : (
         <button
           onClick={onNextHand}
-          className="px-8 py-4 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-lg transition-colors text-base sm:text-lg focus:ring-2 focus:ring-green-400 focus:outline-none"
+          className="px-6 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-lg transition-colors text-base sm:text-lg focus:ring-2 focus:ring-green-400 focus:outline-none"
           aria-label="Next hand (Press Enter or Space)"
           autoFocus
         >
